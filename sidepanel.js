@@ -18,6 +18,7 @@ const keyStatusEl = document.getElementById("key-status");
 const sourceCard = document.querySelector(".source-card");
 const sourceLangBar = document.getElementById("source-lang-bar");
 const targetLangBar = document.getElementById("target-lang-bar");
+const clearBtn = document.getElementById("clear-btn");
 
 const GEMINI_MODEL = "gemini-3.1-flash-lite-preview";
 
@@ -87,6 +88,7 @@ swapBtn.addEventListener("click", () => {
     sourceEl.value = prevResult;
     resultEl.textContent = prevSource;
   }
+  clearBtn.classList.toggle("visible", sourceEl.value.length > 0);
   updateResultDir();
 });
 
@@ -95,6 +97,20 @@ function updateResultDir() {
   resultEl.setAttribute("dir", isRtl ? "rtl" : "ltr");
   swapBtn.classList.toggle("disabled", sourceLang === "auto");
 }
+
+// ── Clear button (show when textarea has text) ───────────
+sourceEl.addEventListener("input", () => {
+  clearBtn.classList.toggle("visible", sourceEl.value.length > 0);
+});
+
+clearBtn.addEventListener("click", () => {
+  sourceEl.value = "";
+  clearBtn.classList.remove("visible");
+  resultEl.innerHTML = '<span class="placeholder">Translation will appear here</span>';
+  copyBtn.disabled = true;
+  hideStatus();
+  sourceEl.focus();
+});
 
 // ── Settings drawer toggle ───────────────────────────────
 function openSettings() {
@@ -144,6 +160,7 @@ toggleKeyBtn.addEventListener("click", () => {
 chrome.runtime.onMessage.addListener((message) => {
   if (message.type === "translate" && message.text) {
     sourceEl.value = message.text;
+    clearBtn.classList.add("visible");
     pulseCard();
     doTranslate(message.text);
   }

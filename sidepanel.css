@@ -290,6 +290,41 @@ main {
   border-color: rgba(59, 130, 246, 0.3);
 }
 
+.clear-btn {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  background: var(--surface-hover);
+  border: none;
+  border-radius: 50%;
+  color: var(--text-muted);
+  cursor: pointer;
+  opacity: 0;
+  transform: scale(0.8);
+  pointer-events: none;
+  transition: opacity var(--transition), transform var(--transition), background var(--transition), color var(--transition);
+  flex-shrink: 0;
+}
+
+.clear-btn:hover {
+  background: var(--danger-light);
+  color: var(--danger);
+}
+
+.clear-btn.visible {
+  opacity: 1;
+  transform: scale(1);
+  pointer-events: auto;
+}
+
+.hidden {
+  display: none !important;
+}
+
 .copy-btn {
   margin-left: auto;
   border: none;
