@@ -2,7 +2,7 @@
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
     id: "translate-to-darija",
-    title: "Tarjama – Translate to Darija",
+    title: "Tarjama – Translate",
     contexts: ["selection"]
   });
 });

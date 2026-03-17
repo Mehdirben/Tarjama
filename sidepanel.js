@@ -3,6 +3,7 @@ const resultEl = document.getElementById("result-text");
 const translateBtn = document.getElementById("translate-btn");
 const copyBtn = document.getElementById("copy-btn");
 const statusEl = document.getElementById("status");
+const swapBtn = document.getElementById("swap-btn");
 
 // Settings drawer elements
 const settingsBtn = document.getElementById("settings-btn");
@@ -15,8 +16,81 @@ const toggleKeyBtn = document.getElementById("toggle-key-btn");
 const keyStatusEl = document.getElementById("key-status");
 
 const sourceCard = document.querySelector(".source-card");
+const sourceLangBar = document.getElementById("source-lang-bar");
+const targetLangBar = document.getElementById("target-lang-bar");
 
 const GEMINI_MODEL = "gemini-3.1-flash-lite-preview";
+
+// ── Language definitions ─────────────────────────────────
+const LANGUAGES = {
+  en:  { label: "English",  rtl: false },
+  fr:  { label: "French",   rtl: false },
+  es:  { label: "Spanish",  rtl: false },
+  ar:  { label: "Modern Standard Arabic", rtl: true  },
+  drj: { label: "Moroccan Arabic Dialect (Darija)", rtl: true  }
+};
+
+let sourceLang = "en";
+let targetLang = "drj";
+
+// ── Language pill selection ──────────────────────────────
+function setActivePill(bar, lang) {
+  bar.querySelectorAll(".lang-pill").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.lang === lang);
+  });
+}
+
+sourceLangBar.addEventListener("click", (e) => {
+  const pill = e.target.closest(".lang-pill");
+  if (!pill) return;
+  const lang = pill.dataset.lang;
+  if (lang === targetLang) {
+    // swap instead of blocking
+    [sourceLang, targetLang] = [lang, sourceLang];
+    setActivePill(sourceLangBar, sourceLang);
+    setActivePill(targetLangBar, targetLang);
+    updateResultDir();
+    return;
+  }
+  sourceLang = lang;
+  setActivePill(sourceLangBar, sourceLang);
+});
+
+targetLangBar.addEventListener("click", (e) => {
+  const pill = e.target.closest(".lang-pill");
+  if (!pill) return;
+  const lang = pill.dataset.lang;
+  if (lang === sourceLang) {
+    [sourceLang, targetLang] = [targetLang, lang];
+    setActivePill(sourceLangBar, sourceLang);
+    setActivePill(targetLangBar, targetLang);
+    updateResultDir();
+    return;
+  }
+  targetLang = lang;
+  setActivePill(targetLangBar, targetLang);
+  updateResultDir();
+});
+
+// ── Swap button ──────────────────────────────────────────
+swapBtn.addEventListener("click", () => {
+  [sourceLang, targetLang] = [targetLang, sourceLang];
+  setActivePill(sourceLangBar, sourceLang);
+  setActivePill(targetLangBar, targetLang);
+  // Also swap the textarea / result text
+  const prevSource = sourceEl.value;
+  const prevResult = resultEl.textContent.trim();
+  if (prevResult && prevResult !== "Translation will appear here") {
+    sourceEl.value = prevResult;
+    resultEl.textContent = prevSource;
+  }
+  updateResultDir();
+});
+
+function updateResultDir() {
+  const isRtl = LANGUAGES[targetLang].rtl;
+  resultEl.setAttribute("dir", isRtl ? "rtl" : "ltr");
+}
 
 // ── Settings drawer toggle ───────────────────────────────
 function openSettings() {
@@ -59,8 +133,7 @@ saveKeyBtn.addEventListener("click", () => {
 
 // ── Toggle key visibility ────────────────────────────────
 toggleKeyBtn.addEventListener("click", () => {
-  const isHidden = apiKeyEl.type === "password";
-  apiKeyEl.type = isHidden ? "text" : "password";
+  apiKeyEl.type = apiKeyEl.type === "password" ? "text" : "password";
 });
 
 // ── Listen for messages from background (context menu) ───
@@ -99,6 +172,11 @@ async function doTranslate(text) {
     return;
   }
 
+  if (sourceLang === targetLang) {
+    showStatus("Source and target language are the same.", "error");
+    return;
+  }
+
   setLoading(true);
   hideStatus();
   resultEl.innerHTML = "";
@@ -107,9 +185,12 @@ async function doTranslate(text) {
   const apiUrl =
     `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${geminiApiKey}`;
 
+  const srcLabel = LANGUAGES[sourceLang].label;
+  const tgtLabel = LANGUAGES[targetLang].label;
+
   const prompt =
-    `Translate the following English text to Moroccan Arabic Dialect (Darija). ` +
-    `Return ONLY the Darija translation, nothing else. No explanations, no transliteration.\n\n` +
+    `Translate the following ${srcLabel} text into ${tgtLabel}. ` +
+    `Return ONLY the translation, nothing else. No explanations, no transliteration.\n\n` +
     `"${text}"`;
 
   try {
@@ -129,8 +210,7 @@ async function doTranslate(text) {
     }
 
     const data = await response.json();
-    const translated =
-      data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+    const translated = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
 
     if (!translated) throw new Error("Empty response from Gemini");
 
@@ -166,6 +246,6 @@ function hideStatus() {
 
 function pulseCard() {
   sourceCard.classList.remove("pulse");
-  void sourceCard.offsetWidth; // force reflow
+  void sourceCard.offsetWidth;
   sourceCard.classList.add("pulse");
 }
