@@ -325,6 +325,8 @@ textarea::placeholder {
   color: var(--text-muted);
   font-style: italic;
   font-size: 13px;
+  display: block;
+  text-align: center;
 }
 
 /* ── Buttons ───────────────────────────────────────────── */
