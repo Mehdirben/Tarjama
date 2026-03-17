@@ -284,6 +284,12 @@ main {
   border-color: rgba(16, 185, 129, 0.3);
 }
 
+.lang-pill[data-lang="auto"].active {
+  background: var(--blue-light);
+  color: var(--blue);
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
 .copy-btn {
   margin-left: auto;
   border: none;
@@ -314,6 +320,12 @@ main {
   padding: 10px 12px;
   border-radius: var(--radius-sm);
   transition: all var(--transition);
+}
+
+.swap-btn.disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 
 .swap-btn:hover svg {

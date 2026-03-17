@@ -23,14 +23,15 @@ const GEMINI_MODEL = "gemini-3.1-flash-lite-preview";
 
 // ── Language definitions ─────────────────────────────────
 const LANGUAGES = {
-  en:  { label: "English",  rtl: false },
-  fr:  { label: "French",   rtl: false },
-  es:  { label: "Spanish",  rtl: false },
-  ar:  { label: "Modern Standard Arabic", rtl: true  },
-  drj: { label: "Moroccan Arabic Dialect (Darija)", rtl: true  }
+  auto: { label: "Auto-detect",                      rtl: false },
+  en:   { label: "English",                          rtl: false },
+  fr:   { label: "French",                           rtl: false },
+  es:   { label: "Spanish",                          rtl: false },
+  ar:   { label: "Modern Standard Arabic",           rtl: true  },
+  drj:  { label: "Moroccan Arabic Dialect (Darija)", rtl: true  }
 };
 
-let sourceLang = "en";
+let sourceLang = "auto";
 let targetLang = "drj";
 
 // ── Language pill selection ──────────────────────────────
@@ -44,9 +45,9 @@ sourceLangBar.addEventListener("click", (e) => {
   const pill = e.target.closest(".lang-pill");
   if (!pill) return;
   const lang = pill.dataset.lang;
-  if (lang === targetLang) {
-    // swap instead of blocking
-    [sourceLang, targetLang] = [lang, sourceLang];
+  // "auto" is always valid as source; real langs swap if they match target
+  if (lang !== "auto" && lang === targetLang) {
+    [sourceLang, targetLang] = [lang, sourceLang === "auto" ? "en" : sourceLang];
     setActivePill(sourceLangBar, sourceLang);
     setActivePill(targetLangBar, targetLang);
     updateResultDir();
@@ -54,6 +55,7 @@ sourceLangBar.addEventListener("click", (e) => {
   }
   sourceLang = lang;
   setActivePill(sourceLangBar, sourceLang);
+  updateResultDir();
 });
 
 targetLangBar.addEventListener("click", (e) => {
@@ -74,10 +76,11 @@ targetLangBar.addEventListener("click", (e) => {
 
 // ── Swap button ──────────────────────────────────────────
 swapBtn.addEventListener("click", () => {
+  // Auto-detect can't be a target; swap only if source is a real language
+  if (sourceLang === "auto") return;
   [sourceLang, targetLang] = [targetLang, sourceLang];
   setActivePill(sourceLangBar, sourceLang);
   setActivePill(targetLangBar, targetLang);
-  // Also swap the textarea / result text
   const prevSource = sourceEl.value;
   const prevResult = resultEl.textContent.trim();
   if (prevResult && prevResult !== "Translation will appear here") {
@@ -90,6 +93,7 @@ swapBtn.addEventListener("click", () => {
 function updateResultDir() {
   const isRtl = LANGUAGES[targetLang].rtl;
   resultEl.setAttribute("dir", isRtl ? "rtl" : "ltr");
+  swapBtn.classList.toggle("disabled", sourceLang === "auto");
 }
 
 // ── Settings drawer toggle ───────────────────────────────
@@ -172,7 +176,7 @@ async function doTranslate(text) {
     return;
   }
 
-  if (sourceLang === targetLang) {
+  if (sourceLang !== "auto" && sourceLang === targetLang) {
     showStatus("Source and target language are the same.", "error");
     return;
   }
@@ -185,13 +189,13 @@ async function doTranslate(text) {
   const apiUrl =
     `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${geminiApiKey}`;
 
-  const srcLabel = LANGUAGES[sourceLang].label;
   const tgtLabel = LANGUAGES[targetLang].label;
 
-  const prompt =
-    `Translate the following ${srcLabel} text into ${tgtLabel}. ` +
-    `Return ONLY the translation, nothing else. No explanations, no transliteration.\n\n` +
-    `"${text}"`;
+  const prompt = sourceLang === "auto"
+    ? `Detect the language of the following text and translate it into ${tgtLabel}. ` +
+      `Return ONLY the translation, nothing else. No explanations, no transliteration.\n\n"${text}"`
+    : `Translate the following ${LANGUAGES[sourceLang].label} text into ${tgtLabel}. ` +
+      `Return ONLY the translation, nothing else. No explanations, no transliteration.\n\n"${text}"`;
 
   try {
     const response = await fetch(apiUrl, {
@@ -249,3 +253,6 @@ function pulseCard() {
   void sourceCard.offsetWidth;
   sourceCard.classList.add("pulse");
 }
+
+// ── Init ─────────────────────────────────────────────────
+updateResultDir();
