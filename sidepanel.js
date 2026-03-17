@@ -3,14 +3,37 @@ const resultEl = document.getElementById("result-text");
 const translateBtn = document.getElementById("translate-btn");
 const copyBtn = document.getElementById("copy-btn");
 const statusEl = document.getElementById("status");
+
+// Settings drawer elements
+const settingsBtn = document.getElementById("settings-btn");
+const closeSettings = document.getElementById("close-settings");
+const overlay = document.getElementById("settings-overlay");
+const drawer = document.getElementById("settings-drawer");
 const apiKeyEl = document.getElementById("api-key");
 const saveKeyBtn = document.getElementById("save-key-btn");
 const toggleKeyBtn = document.getElementById("toggle-key-btn");
 const keyStatusEl = document.getElementById("key-status");
 
+const sourceCard = document.querySelector(".source-card");
+
 const GEMINI_MODEL = "gemini-3.1-flash-lite-preview";
 
-// ── Load saved API key on startup ────────────────────────────
+// ── Settings drawer toggle ───────────────────────────────
+function openSettings() {
+  drawer.classList.remove("hidden");
+  overlay.classList.remove("hidden");
+}
+
+function closeSettingsDrawer() {
+  drawer.classList.add("hidden");
+  overlay.classList.add("hidden");
+}
+
+settingsBtn.addEventListener("click", openSettings);
+closeSettings.addEventListener("click", closeSettingsDrawer);
+overlay.addEventListener("click", closeSettingsDrawer);
+
+// ── Load saved API key on startup ────────────────────────
 chrome.storage.local.get("geminiApiKey", ({ geminiApiKey }) => {
   if (geminiApiKey) {
     apiKeyEl.value = geminiApiKey;
@@ -19,7 +42,7 @@ chrome.storage.local.get("geminiApiKey", ({ geminiApiKey }) => {
   }
 });
 
-// ── Save API key ─────────────────────────────────────────────
+// ── Save API key ─────────────────────────────────────────
 saveKeyBtn.addEventListener("click", () => {
   const key = apiKeyEl.value.trim();
   if (!key) {
@@ -30,31 +53,33 @@ saveKeyBtn.addEventListener("click", () => {
   chrome.storage.local.set({ geminiApiKey: key }, () => {
     keyStatusEl.textContent = "Key saved";
     keyStatusEl.className = "key-status saved";
+    setTimeout(closeSettingsDrawer, 600);
   });
 });
 
-// ── Toggle key visibility ────────────────────────────────────
+// ── Toggle key visibility ────────────────────────────────
 toggleKeyBtn.addEventListener("click", () => {
   const isHidden = apiKeyEl.type === "password";
   apiKeyEl.type = isHidden ? "text" : "password";
 });
 
-// ── Listen for messages from the background service worker ───
+// ── Listen for messages from background (context menu) ───
 chrome.runtime.onMessage.addListener((message) => {
   if (message.type === "translate" && message.text) {
     sourceEl.value = message.text;
+    pulseCard();
     doTranslate(message.text);
   }
 });
 
-// ── Translate button ─────────────────────────────────────────
+// ── Translate button ─────────────────────────────────────
 translateBtn.addEventListener("click", () => {
   const text = sourceEl.value.trim();
   if (!text) return;
   doTranslate(text);
 });
 
-// ── Copy button ──────────────────────────────────────────────
+// ── Copy button ──────────────────────────────────────────
 copyBtn.addEventListener("click", () => {
   const text = resultEl.textContent;
   if (!text) return;
@@ -63,13 +88,13 @@ copyBtn.addEventListener("click", () => {
   });
 });
 
-// ── Core translation logic (Gemini API) ──────────────────────
+// ── Core translation logic (Gemini API) ──────────────────
 async function doTranslate(text) {
-  // Read key from storage (may have been saved earlier)
   const { geminiApiKey } = await chrome.storage.local.get("geminiApiKey");
 
   if (!geminiApiKey) {
-    showStatus("Please enter and save your Gemini API key first.", "error");
+    showStatus("Add your Gemini API key in Settings first.", "error");
+    openSettings();
     apiKeyEl.focus();
     return;
   }
@@ -107,9 +132,7 @@ async function doTranslate(text) {
     const translated =
       data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
 
-    if (!translated) {
-      throw new Error("Empty response from Gemini");
-    }
+    if (!translated) throw new Error("Empty response from Gemini");
 
     resultEl.textContent = translated;
     copyBtn.disabled = false;
@@ -122,20 +145,27 @@ async function doTranslate(text) {
   }
 }
 
-// ── Helpers ──────────────────────────────────────────────────
+// ── Helpers ──────────────────────────────────────────────
 function setLoading(loading) {
   translateBtn.disabled = loading;
-  translateBtn.textContent = loading ? "Translating…" : "Translate";
+  const label = translateBtn.querySelector(".btn-label");
+  label.textContent = loading ? "Translating..." : "Translate";
   if (loading) translateBtn.classList.add("loading");
   else translateBtn.classList.remove("loading");
 }
 
 function showStatus(msg, type) {
   statusEl.textContent = msg;
-  statusEl.className = `status ${type}`;
+  statusEl.className = `toast ${type}`;
   statusEl.hidden = false;
 }
 
 function hideStatus() {
   statusEl.hidden = true;
+}
+
+function pulseCard() {
+  sourceCard.classList.remove("pulse");
+  void sourceCard.offsetWidth; // force reflow
+  sourceCard.classList.add("pulse");
 }
