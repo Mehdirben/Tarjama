@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Tarjama – English to Darija Translator",
+  "name": "Tarjama – Multilingual Translator",
   "version": "1.0",
   "description": "Translate between English, French, Spanish, Arabic and Moroccan Darija in a side panel.",
   "permissions": [

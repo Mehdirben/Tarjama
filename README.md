@@ -1,4 +1,4 @@
-# Tarjama – English to Darija Translator
+# Tarjama – Multilingual Translator
 
 **Tarjama** (ترجمة) is a sleek, Manifest V3 Chrome Extension that lives directly in your browser's Side Panel, bringing robust translation capabilities to your fingertips without interrupting your current workflow. It leverages the speed and power of the **Google Gemini API** (specifically `gemini-3.1-flash-lite-preview`) to offer seamless translations between major global languages and regional dialects.
 
